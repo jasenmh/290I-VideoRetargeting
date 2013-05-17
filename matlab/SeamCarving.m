@@ -1,3 +1,10 @@
+% SeamCarving.m
+% A function to remove the lowest-energy lines vertically and/or
+% horisontally from an image.
+% ImgName: a string containing the image file name
+% hor: the number of horizontal lines to carve from the image
+% ver: the number of vertical lines to carve from the image
+% resizedImage: a matrix containing the resized image after seam carving
 function [resizedImage] = SeamCarving(ImgName, hor, ver)
 inputImage = imread(ImgName);
 figure;
