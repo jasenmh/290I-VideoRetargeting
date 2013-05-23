@@ -1,12 +1,6 @@
-% SeamCarving.m
-% A function to remove the lowest-energy lines vertically and/or
-% horisontally from an image.
-% ImgName: a string containing the image file name
-% hor: the number of horizontal lines to carve from the image
-% ver: the number of vertical lines to carve from the image
-% resizedImage: a matrix containing the resized image after seam carving
 function [resizedImage] = SeamCarving(ImgName, hor, ver)
 inputImage = imread(ImgName);
+inputImage = double(inputImage)/255;
 figure;
 %imshow(inputImage);
 GradMean = CalcGradient(inputImage);
@@ -28,6 +22,9 @@ for j=1:1:(max(ver,hor)-min(ver,hor))
         [ReducedImage,ReducedGradMean] = RemoveHor(ReducedGradMean, ReducedImage);
     end
 end
+% figure
+% imshow(ReducedImage);
+% ReducedImage = uint8(ReducedImage*255);
 imshow(inputImage);
 figure
 imshow(ReducedImage);
@@ -37,14 +34,15 @@ function [ReducedImage,ReducedGradMean] = RemoveVer(ReducedGradMean, ReducedImag
 EnergyMapVer = CalcEnergyMap(ReducedGradMean);
 SeamVer = findSeam(EnergyMapVer);
 ReducedImage = RemoveSeam(ReducedImage,SeamVer);
-ReducedGradMean = RemoveSeam(ReducedGradMean, SeamVer);
+ReducedGradMean = RemoveSeamGradient(ReducedGradMean, SeamVer);
 end
 function [ReducedImage,ReducedGradMean] = RemoveHor(ReducedGradMean, ReducedImage)
 EnergyMapHor = CalcEnergyMap(ReducedGradMean');
 SeamHor = findSeam(EnergyMapHor);
 ReducedImage = RemoveSeam(permute(ReducedImage, [2,1,3]), SeamHor);
-ReducedGradMean = RemoveSeam(ReducedGradMean, SeamHor);
+ReducedGradMean = RemoveSeamGradient(permute(ReducedGradMean,[2,1,3]), SeamHor);
 ReducedImage = permute(ReducedImage, [2,1,3]);
+ReducedGradMean = permute(ReducedGradMean, [2,1,3]);
 end
 % calculating Energy Map for input image
 function [GradMean] = CalcGradient(inputImage)
@@ -114,8 +112,28 @@ for k=1:1:dim
     end
         
 end
-if(dim~=1)
-ReducedImage = uint8(ReducedImage);
-end
+% if(dim~=1)
+% ReducedImage = uint8(ReducedImage*255);
+% end
 %input = inputImage(:,:,1);
+end
+function [ReducedGradMean] = RemoveSeamGradient(GradMean, Seam)
+[rows, cols, dim] = size(GradMean);
+ReducedGradMean = zeros(rows,cols-1, dim);
+for i=1:1:rows
+    for j=1:1:cols-1
+%         if(j == Seam(i)-1)
+%             GradMean(i,j) = GradMean(i,j) + GradMean(i,Seam(i))/2;
+%         end
+%         if(j == Seam(i))
+%             GradMean(i,j+1) = GradMean(i,j+1) + GradMean(i,Seam(i))/2;
+%         end
+        if(j < Seam(i))
+            ReducedGradMean(i,j) = GradMean(i,j);
+        elseif(j >= Seam(i))
+            ReducedGradMean(i,j) = GradMean(i,j+1);
+        end                
+    end
+end
+
 end
