@@ -15,9 +15,9 @@ using namespace std;
 using namespace cv;
 /* Declarations */
 Mat RemoveSeam(Mat image, int Seam[] );
-int *FindSeam(Mat grayImage1, Mat grayImage2);
-Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2, Mat image);
-Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat image);
+int *FindSeam(Mat grayImage1, Mat grayImage2, Mat grayImage3, Mat grayImage4);
+Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2,Mat &GrayImage3, Mat &GrayImage4, Mat image);
+Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2,Mat &GrayImage3, Mat &GrayImage4, Mat image);
 Mat RemoveSeamGray(Mat GrayImage, int Seam[]);
 
 /* Definitions */
@@ -78,14 +78,14 @@ Mat RemoveSeamGray(Mat GrayImage, int Seam[])
     return ReducedImage;
 }
 
-int *FindSeam(Mat grayImage1, Mat grayImage2)
+int *FindSeam(Mat grayImage1, Mat grayImage2, Mat grayImage3, Mat grayImage4)
 {
     typedef Graph<int,int,int> GraphType;
     int rows = grayImage1.rows;
     int cols = grayImage1.cols;
     double inf = 100000;
     int *Seam = new int[rows];
-    float alpha = 0.7;
+    float alpha1 = 0.5, alpha2 = 0.2, alpha3=0.15, alpha4 = 0.15;
     GraphType *g = new GraphType(/*estimated # of nodes*/ rows*cols, /*estimated # of edges*/ ((rows-1)*cols + (cols-1)*rows + 2*(rows-1)*(cols-1)));
 
 
@@ -94,7 +94,7 @@ int *FindSeam(Mat grayImage1, Mat grayImage2)
       *-LU = |I(i,j-1)-I(i-1,j)|
       *
       */
-    int LR, LR1,LR2, posLU1,posLU2,posLU, negLU, negLU1, negLU2;
+    int LR, LR1,LR2,LR3,LR4, posLU1,posLU2,posLU3,posLU4,posLU, negLU, negLU1, negLU2,negLU3, negLU4;
     for (int i = 1; i<=rows*cols; i++)
     {
         g -> add_node();
@@ -117,14 +117,18 @@ int *FindSeam(Mat grayImage1, Mat grayImage2)
             {
                 LR1 = grayImage1.at<unsigned char>(i,j+1);
                 LR2 = grayImage2.at<unsigned char>(i,j+1);
-                LR = alpha*LR1 + (1-alpha)*LR2;
+                LR3 = grayImage3.at<unsigned char>(i,j+1);
+                LR4 = grayImage4.at<unsigned char>(i,j+1);
+                LR = alpha1*LR1 + alpha2*LR2 + alpha3*LR3 + alpha4*LR4;
                 g -> add_edge( i*cols, i*cols+1,    /* capacities */ LR, inf );
             }
             else if(j!=cols-1)
             {
                 LR1 = abs(grayImage1.at<unsigned char>(i,j+1) - grayImage1.at<unsigned char>(i,j-1));
                 LR2 = abs(grayImage2.at<unsigned char>(i,j+1) - grayImage2.at<unsigned char>(i,j-1));
-                LR = alpha*LR1 + (1-alpha)*LR2;
+                LR3 = abs(grayImage3.at<unsigned char>(i,j+1) - grayImage3.at<unsigned char>(i,j-1));
+                LR4 = abs(grayImage4.at<unsigned char>(i,j+1) - grayImage4.at<unsigned char>(i,j-1));
+                LR = alpha1*LR1 + alpha2*LR2 + alpha3*LR3 + alpha4*LR4;
                 g -> add_edge( i*cols + j, i*cols + j +1, LR, inf );
             }
 
@@ -134,20 +138,28 @@ int *FindSeam(Mat grayImage1, Mat grayImage2)
                 {
                     posLU1 = grayImage1.at<unsigned char>(i,j);
                     posLU2 = grayImage2.at<unsigned char>(i,j);
-                    posLU = alpha*posLU1 + (1-alpha)*posLU2;
+                    posLU3 = grayImage3.at<unsigned char>(i,j);
+                    posLU4 = grayImage4.at<unsigned char>(i,j);
+                    posLU = alpha1*posLU1 + alpha2*posLU2 + alpha3*posLU3 + alpha4*posLU4;
                     negLU1 = grayImage1.at<unsigned char>(i+1,j);
                     negLU2 = grayImage2.at<unsigned char>(i+1,j);
-                    negLU = alpha*negLU1 + (1-alpha)*negLU2;
+                    negLU3 = grayImage3.at<unsigned char>(i+1,j);
+                    negLU4 = grayImage4.at<unsigned char>(i+1,j);
+                    negLU = alpha1*negLU1 + alpha2*negLU2 + alpha3*negLU3 + alpha4*negLU4;
                     g -> add_edge( i*cols + j, i*cols + j +1, negLU, posLU );
                 }
                 else
                 {
                     posLU1 = abs(grayImage1.at<unsigned char>(i,j)-grayImage1.at<unsigned char>(i+1,j-1));
                     posLU2= abs(grayImage2.at<unsigned char>(i,j)-grayImage2.at<unsigned char>(i+1,j-1));
-                    posLU = alpha*posLU1 + (1-alpha)*posLU2;
+                    posLU3= abs(grayImage3.at<unsigned char>(i,j)-grayImage3.at<unsigned char>(i+1,j-1));
+                    posLU4= abs(grayImage4.at<unsigned char>(i,j)-grayImage4.at<unsigned char>(i+1,j-1));
+                    posLU = alpha1*posLU1 + alpha2*posLU2 + alpha3*posLU3 + alpha4*posLU4;
                     negLU1 = abs(grayImage1.at<unsigned char>(i+1,j)-grayImage1.at<unsigned char>(i,j-1));
                     negLU2 = abs(grayImage2.at<unsigned char>(i+1,j)-grayImage2.at<unsigned char>(i,j-1));
-                    negLU = alpha*negLU1 + (1-alpha)*negLU2;
+                    negLU3 = abs(grayImage3.at<unsigned char>(i+1,j)-grayImage3.at<unsigned char>(i,j-1));
+                    negLU4 = abs(grayImage4.at<unsigned char>(i+1,j)-grayImage4.at<unsigned char>(i,j-1));
+                    negLU = alpha1*negLU1 + alpha2*negLU2 + alpha3*negLU3 + alpha4*negLU4;
                     g -> add_edge( i*cols + j, i*cols + j +1, negLU, posLU );
                 }
             }
@@ -167,13 +179,6 @@ int *FindSeam(Mat grayImage1, Mat grayImage2)
 
     cout << "Flow = %d\n" << flow << endl;
     cout<< "Minimum cut:\n"<<endl;
-    /*for(int i=0;i<16; i++)
-     {
-     if (g->what_segment(i) == GraphType::SOURCE)
-         cout<<"node" << i <<" is in the SOURCE set\n"<<endl;
-     else
-         cout<<"node" << i <<"is in the SINK set\n"<<endl;
-     }*/
     for(int i=0; i<rows; i++)
     {
         for(int j=0;j<cols; j++)
@@ -189,28 +194,26 @@ int *FindSeam(Mat grayImage1, Mat grayImage2)
             }
         }
     }
-    for(int k=0; k<rows; k++)
-    {
-        cout<< "Seam" << Seam[k] << endl;
-    }
     delete g;
     return Seam;
 }
-Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2, Mat image)
+Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2, Mat &GrayImage3, Mat &GrayImage4, Mat image)
 {
     int rows = GrayImage1.rows;
     int *Seam = new int[rows];
-    Seam = FindSeam(GrayImage1, GrayImage2);
+    Seam = FindSeam(GrayImage1, GrayImage2, GrayImage3, GrayImage4);
     Mat ReturnImage = RemoveSeam(image, Seam);
     GrayImage1 = RemoveSeamGray(GrayImage1, Seam);
     GrayImage2 = RemoveSeamGray(GrayImage2, Seam);
+    GrayImage3 = RemoveSeamGray(GrayImage3, Seam);
+    GrayImage4 = RemoveSeamGray(GrayImage4, Seam);
     return ReturnImage;
 }
-Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat image)
+Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat &GrayImage3, Mat &GrayImage4,Mat image)
 {
     int rows = GrayImage1.rows;
     int *Seam = new int[rows];
-    Seam = FindSeam(GrayImage1.t(), GrayImage2.t());
+    Seam = FindSeam(GrayImage1.t(), GrayImage2.t(),GrayImage3.t(),GrayImage4.t());
     /*for(int k=0; k<rows; k++)
     {
         cout<< "Seam Hor" << Seam[k] << endl;
@@ -219,20 +222,28 @@ Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat image)
     Mat ReturnImage = RemoveSeam(image, Seam);
     Mat GrayImage1temp = RemoveSeamGray(GrayImage1.t(), Seam);
     Mat GrayImage2temp = RemoveSeamGray(GrayImage2.t(), Seam);
+    Mat GrayImage3temp = RemoveSeamGray(GrayImage3.t(), Seam);
+    Mat GrayImage4temp = RemoveSeamGray(GrayImage4.t(), Seam);
     GrayImage1 = GrayImage1temp.t();
     GrayImage2 = GrayImage2temp.t();
+    GrayImage3 = GrayImage3temp.t();
+    GrayImage4 = GrayImage4temp.t();
     return ReturnImage.t();
 }
-Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
+Mat ReduceFrame(Mat frame1, Mat frame2, Mat frame3, Mat frame4,int ver, int hor)
 {
     //Mat image = frame1;
-    Mat grayImage1, grayImage2;// = (Mat_<int>(4, 4) << 4,5,200,200,4,5,200,200,4,5,5,198,4,5,5,5);
+    Mat grayImage1, grayImage2, grayImage3, grayImage4;
     cvtColor(frame1,grayImage1, CV_RGB2GRAY);
     cvtColor(frame2,grayImage2, CV_RGB2GRAY);
+    cvtColor(frame3,grayImage3, CV_RGB2GRAY);
+    cvtColor(frame4,grayImage4, CV_RGB2GRAY);
     int minDim = 0, diffHorVer = 0;
-    Mat ReducedGrayImage1, ReducedGrayImage2, ReducedImage;
+    Mat ReducedGrayImage1, ReducedGrayImage2, ReducedGrayImage3,ReducedGrayImage4,ReducedImage;
     grayImage1.copyTo(ReducedGrayImage1);
     grayImage2.copyTo(ReducedGrayImage2);
+    grayImage3.copyTo(ReducedGrayImage3);
+    grayImage4.copyTo(ReducedGrayImage4);
     frame1.copyTo(ReducedImage);
 
     if(hor > ver)
@@ -250,9 +261,9 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     // the two
     for(int i = 0; i < minDim; ++i)
     {
-        ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2, ReducedImage);
+        ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2, ReducedGrayImage3,ReducedGrayImage4, ReducedImage);
         //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
-        ReducedImage = ReduceHor(ReducedGrayImage1, ReducedGrayImage2, ReducedImage.t());
+        ReducedImage = ReduceHor(ReducedGrayImage1, ReducedGrayImage2,ReducedGrayImage3,ReducedGrayImage4, ReducedImage.t());
         //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
     }
 
@@ -261,7 +272,7 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     {
         for(int i = 0; i < diffHorVer; ++i)
         {
-            ReducedImage = ReduceHor(ReducedGrayImage1,ReducedGrayImage2, ReducedImage.t());
+            ReducedImage = ReduceHor(ReducedGrayImage1,ReducedGrayImage2,ReducedGrayImage3,ReducedGrayImage4, ReducedImage.t());
             //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
         }
     }
@@ -269,7 +280,7 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     {
         for(int i = 0; i < diffHorVer; ++i)
         {
-            ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2, ReducedImage);
+            ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2,ReducedGrayImage3,ReducedGrayImage4, ReducedImage);
             //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
         }
     }
@@ -281,9 +292,9 @@ int main()
     VideoCapture cap;
     VideoWriter output;
     cap.open("88_7_orig.mov");
-    Mat frame1, frame2, NewFrame;
-    int ver = 10;
-    int hor = 10;
+    Mat frame1, frame2, frame3, frame4, NewFrame;
+    int ver = 2;
+    int hor = 2;
 
     if(!cap.isOpened())
     {
@@ -293,13 +304,13 @@ int main()
     int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     Size S = Size((int)cap.get(CV_CAP_PROP_FRAME_WIDTH) -ver , (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT)-hor);
     char key = 0;
-    int first = 1;
+    int first = 1, second = 1, third = 1;
     int last = 0;
     NewFrame = Mat::zeros(S, CV_32F);
     output.open("result.mov", ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
     //int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
-    while (key != 'q' && !last)
+    while (key != 'q' && last<3 )
     {
         if(first ==1 )
         {
@@ -312,18 +323,56 @@ int main()
             first = 0;
             continue;
         }
-        else
+        else if(second==1)
         {
             cap >> frame2;
-            if(frame2.empty())
+            if (frame2.empty())
+            {
+                printf("!!! cvQueryFrame failed: no frame\n");
+                break;
+            }
+            second = 0;
+            continue;
+        }
+        else if(third==1)
+        {
+            cap >> frame3;
+            if (frame3.empty())
+            {
+                printf("!!! cvQueryFrame failed: no frame\n");
+                break;
+            }
+            third = 0;
+            continue;
+        }
+        else
+        {
+            cap >> frame4;
+            if(frame4.empty())
             {
                 /* Graph cut on frame 1 */
                 cout<< "Last frame" << endl;
-                frame2 = frame1;
-                last = 1;
+                if(last ==0)
+                {
+                    frame4 = frame1;
+                }
+                else if(last ==1)
+                {
+                    frame3 = frame1;
+                    frame4 = frame2;
+                }
+                else if(last ==2)
+                {
+                    frame3 = frame1;
+                    frame4 = frame1;
+                    frame2 = frame1;
+                }
+                last = last+1;
             }
-            NewFrame = ReduceFrame(frame1, frame2, ver, hor);
+            NewFrame = ReduceFrame(frame1, frame2, frame3, frame4, ver, hor);
             frame1 = frame2;
+            frame2 = frame3;
+            frame3 = frame4;
         }
         imshow("Frames", NewFrame);
         // quit when user press 'q'
