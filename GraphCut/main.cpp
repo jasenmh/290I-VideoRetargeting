@@ -5,6 +5,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
 #include <cstdlib>
+#include <stdlib.h>
 #include <cmath>
 #include <string>
 #include <opencv/cv.h>
@@ -12,29 +13,35 @@
 
 using namespace std;
 using namespace cv;
-Mat RemoveSeam(Mat &GrayImage,int Seam[] );
+Mat RemoveSeam(Mat image, int Seam[] );
 int *FindSeam(Mat &GrayImage);
-Mat RemoveSeam(Mat &GrayImage, int Seam[])
+Mat ReduceVer(Mat GrayImage, Mat image);
+Mat ReduceHor(Mat GrayImage, Mat image);
+Mat RemoveSeam(Mat image, int Seam[])
 {
-    int nrows = GrayImage.rows;
-    int ncols = GrayImage.cols;
-    Mat ReducedGrayImage(nrows,ncols-1,CV_8UC1);
+    int nrows = image.rows;
+    int ncols = image.cols;
+    Mat ReducedImage(nrows,ncols-1,CV_8UC3);
     //ReducedGrayImage.copyTo(temp);
+    //for(int k = 0;k<3;k++)
+    //vector<Mat> channels = cv::split()
     for(int i=0; i<nrows; i++)
     {
-        for(int j=0; j<ncols-1; j++)
+        image.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
+        image.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
+        /*for(int j=0; j<ncols-1; j++)
         {
             if(j<Seam[i])
             {
-                ReducedGrayImage.at<unsigned char>(i,j) = GrayImage.at<unsigned char>(i,j);
+                ReducedImage.at<cv::Vec3b>(Point(j,i))= image.at<cv::Vec3b>(Point(j,i));
             }
             else
             {
-                ReducedGrayImage.at<unsigned char>(i,j) = GrayImage.at<unsigned char>(i,j+1);
+                ReducedImage.at<cv::Vec3b>(Point(j,i)) = image.at<cv::Vec3b>(Point(j+1,i));
             }
-        }
+        }*/
     }
-    return ReducedGrayImage;
+    return ReducedImage;
 }
 int *FindSeam(Mat &grayImage)
 {
@@ -136,33 +143,127 @@ int *FindSeam(Mat &grayImage)
     delete g;
     return Seam;
 }
+Mat ReduceVer(Mat GrayImage, Mat image)
+{
+    int rows = GrayImage.rows;
+    int *Seam = new int[rows];
+    Seam = FindSeam(GrayImage);
+    Mat ReturnImage = RemoveSeam(image, Seam);
+    return ReturnImage;
+}
+Mat ReduceHor(Mat GrayImage, Mat image)
+{
+    int rows = GrayImage.rows;
+    int *Seam = new int[rows];
+    Seam = FindSeam(GrayImage);
+    Mat ReturnImage = RemoveSeam(image, Seam);
+    return ReturnImage.t();
+}
+Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
+{
+    Mat image = frame1;
+    Mat grayImage;// = (Mat_<int>(4, 4) << 4,5,200,200,4,5,200,200,4,5,5,198,4,5,5,5);
+    cvtColor(image,grayImage, CV_RGB2GRAY);
+    int minDim = 0, diffHorVer = 0;
+    Mat ReducedGrayImage, ReducedImage;
+    grayImage.copyTo(ReducedGrayImage);
+    image.copyTo(ReducedImage);
+
+    if(hor > ver)
+    {
+        diffHorVer = hor - ver;
+        minDim = ver;
+    }
+    else
+    {
+        diffHorVer = ver - hor;
+        minDim = hor;
+    }
+
+    // do alternating horizontal and vertical seam carves up the the min of
+    // the two
+    for(int i = 0; i < minDim; ++i)
+    {
+        ReducedImage = ReduceVer(ReducedGrayImage, ReducedImage);
+        cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+        ReducedImage = ReduceHor(ReducedGrayImage.t(), ReducedImage.t());
+        cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+    }
+
+    // finish carving the larger dimension
+    if(hor > ver)
+    {
+        for(int i = 0; i < diffHorVer; ++i)
+        {
+            ReducedImage = ReduceHor(ReducedGrayImage.t(), ReducedImage.t());
+            cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+        }
+    }
+    else
+    {
+        for(int i = 0; i < diffHorVer; ++i)
+        {
+            ReducedImage = ReduceVer(ReducedGrayImage, ReducedImage);
+            cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+        }
+    }
+    return ReducedImage;
+}
 
 int main()
 {
-    Mat image = imread("waterfall.png",1);
-    //imshow("original", image);
-    Mat grayImage;// = (Mat_<int>(4, 4) << 4,5,200,200,4,5,200,200,4,5,5,198,4,5,5,5);
-    cvtColor(image,grayImage, CV_RGB2GRAY);
-    int ver = 10;
-    imshow("Gray Image", grayImage);
-    //cvWaitKey(0);
-    Mat ReducedGrayImage;
-    grayImage.copyTo(ReducedGrayImage);
-    for(int k =0; k<ver; k++)
-    {
-        int rows = ReducedGrayImage.rows;
-        int *Seam = new int[rows];
-        Seam = FindSeam(ReducedGrayImage);
+    VideoCapture cap;
+    VideoWriter output;
+    cap.open("88_7_orig.mov");
+    Mat frame1, frame2, NewFrame;
+    int ver = 2;
+    int hor = 2;
 
-        /*for(int i=0; i<rows; i++)
+    if(!cap.isOpened())
     {
-        cout<<"Seam Cols = " << Seam[i]<<endl;
-    }*/
-        ReducedGrayImage = RemoveSeam(ReducedGrayImage, Seam);
+        printf("!!! cvCaptureFromAVI failed (file not found?)\n");
+        return -1;
     }
-    imshow("Reduced Gray Image", ReducedGrayImage);
-    cvWaitKey(0);
+    int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
+    Size S = Size((int)cap.get(CV_CAP_PROP_FRAME_WIDTH) -ver , (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT)-hor);
+    char key = 0;
+    int first = 1;
+    int last = 0;
+    NewFrame = Mat::zeros(S, CV_32F);
+    output.open("result.mov", ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
+    //int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
+    while (key != 'q' && !last)
+    {
+        if(first ==1 )
+        {
+            cap >> frame1;
+            if (frame1.empty())
+            {
+                printf("!!! cvQueryFrame failed: no frame\n");
+                break;
+            }
+            first = 0;
+            continue;
+        }
+        else
+        {
+            cap >> frame2;
+            if(frame2.empty())
+            {
+                /* Graph cut on frame 1 */
+                cout<< "Last frame" << endl;
+                frame2 = frame1;
+                last = 1;
+            }
+            NewFrame = ReduceFrame(frame1, frame2, ver, hor);
+            frame1 = frame2;
+        }
+        imshow("Frames", NewFrame);
+        // quit when user press 'q'
+        output<<NewFrame;
+        key = cvWaitKey(1000 / 25);
+    }
     return 0;
 }
 
