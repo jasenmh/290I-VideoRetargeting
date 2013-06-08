@@ -13,10 +13,14 @@
 
 using namespace std;
 using namespace cv;
+/* Declarations */
 Mat RemoveSeam(Mat image, int Seam[] );
-int *FindSeam(Mat &GrayImage);
-Mat ReduceVer(Mat GrayImage, Mat image);
-Mat ReduceHor(Mat GrayImage, Mat image);
+int *FindSeam(Mat grayImage1, Mat grayImage2);
+Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2, Mat image);
+Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat image);
+Mat RemoveSeamGray(Mat GrayImage, int Seam[]);
+
+/* Definitions */
 Mat RemoveSeam(Mat image, int Seam[])
 {
     int nrows = image.rows;
@@ -25,6 +29,10 @@ Mat RemoveSeam(Mat image, int Seam[])
     //ReducedGrayImage.copyTo(temp);
     //for(int k = 0;k<3;k++)
     //vector<Mat> channels = cv::split()
+    /*for(int k=0; k<nrows; k++)
+    {
+        cout<< "Seam" << Seam[k] << endl;
+    }*/
     for(int i=0; i<nrows; i++)
     {
         image.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
@@ -43,13 +51,41 @@ Mat RemoveSeam(Mat image, int Seam[])
     }
     return ReducedImage;
 }
-int *FindSeam(Mat &grayImage)
+Mat RemoveSeamGray(Mat GrayImage, int Seam[])
+{
+    int nrows = GrayImage.rows;
+    int ncols = GrayImage.cols;
+    Mat ReducedImage(nrows,ncols-1,CV_8UC1);
+    //ReducedGrayImage.copyTo(temp);
+    //for(int k = 0;k<3;k++)
+    //vector<Mat> channels = cv::split()
+    for(int i=0; i<nrows; i++)
+    {
+        GrayImage.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
+        GrayImage.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
+        /*for(int j=0; j<ncols-1; j++)
+        {
+            if(j<Seam[i])
+            {
+                ReducedImage.at<cv::Vec3b>(Point(j,i))= image.at<cv::Vec3b>(Point(j,i));
+            }
+            else
+            {
+                ReducedImage.at<cv::Vec3b>(Point(j,i)) = image.at<cv::Vec3b>(Point(j+1,i));
+            }
+        }*/
+    }
+    return ReducedImage;
+}
+
+int *FindSeam(Mat grayImage1, Mat grayImage2)
 {
     typedef Graph<int,int,int> GraphType;
-    int rows = grayImage.rows;
-    int cols = grayImage.cols;
+    int rows = grayImage1.rows;
+    int cols = grayImage1.cols;
     double inf = 100000;
     int *Seam = new int[rows];
+    float alpha = 0.7;
     GraphType *g = new GraphType(/*estimated # of nodes*/ rows*cols, /*estimated # of edges*/ ((rows-1)*cols + (cols-1)*rows + 2*(rows-1)*(cols-1)));
 
 
@@ -58,7 +94,7 @@ int *FindSeam(Mat &grayImage)
       *-LU = |I(i,j-1)-I(i-1,j)|
       *
       */
-    int LR, posLU, negLU;
+    int LR, LR1,LR2, posLU1,posLU2,posLU, negLU, negLU1, negLU2;
     for (int i = 1; i<=rows*cols; i++)
     {
         g -> add_node();
@@ -79,11 +115,16 @@ int *FindSeam(Mat &grayImage)
 
             if(j==0)
             {
-                g -> add_edge( i*cols, i*cols+1,    /* capacities */ grayImage.at<unsigned char>(i,j+1), inf );
+                LR1 = grayImage1.at<unsigned char>(i,j+1);
+                LR2 = grayImage2.at<unsigned char>(i,j+1);
+                LR = alpha*LR1 + (1-alpha)*LR2;
+                g -> add_edge( i*cols, i*cols+1,    /* capacities */ LR, inf );
             }
             else if(j!=cols-1)
             {
-                LR = abs(grayImage.at<unsigned char>(i,j+1) - grayImage.at<unsigned char>(i,j-1));
+                LR1 = abs(grayImage1.at<unsigned char>(i,j+1) - grayImage1.at<unsigned char>(i,j-1));
+                LR2 = abs(grayImage2.at<unsigned char>(i,j+1) - grayImage2.at<unsigned char>(i,j-1));
+                LR = alpha*LR1 + (1-alpha)*LR2;
                 g -> add_edge( i*cols + j, i*cols + j +1, LR, inf );
             }
 
@@ -91,14 +132,22 @@ int *FindSeam(Mat &grayImage)
             {
                 if(j==0)
                 {
-                    posLU = grayImage.at<unsigned char>(i,j);
-                    negLU = grayImage.at<unsigned char>(i+1,j);
+                    posLU1 = grayImage1.at<unsigned char>(i,j);
+                    posLU2 = grayImage2.at<unsigned char>(i,j);
+                    posLU = alpha*posLU1 + (1-alpha)*posLU2;
+                    negLU1 = grayImage1.at<unsigned char>(i+1,j);
+                    negLU2 = grayImage2.at<unsigned char>(i+1,j);
+                    negLU = alpha*negLU1 + (1-alpha)*negLU2;
                     g -> add_edge( i*cols + j, i*cols + j +1, negLU, posLU );
                 }
                 else
                 {
-                    posLU = abs(grayImage.at<unsigned char>(i,j)-grayImage.at<unsigned char>(i+1,j-1));
-                    negLU = abs(grayImage.at<unsigned char>(i+1,j)-grayImage.at<unsigned char>(i,j-1));
+                    posLU1 = abs(grayImage1.at<unsigned char>(i,j)-grayImage1.at<unsigned char>(i+1,j-1));
+                    posLU2= abs(grayImage2.at<unsigned char>(i,j)-grayImage2.at<unsigned char>(i+1,j-1));
+                    posLU = alpha*posLU1 + (1-alpha)*posLU2;
+                    negLU1 = abs(grayImage1.at<unsigned char>(i+1,j)-grayImage1.at<unsigned char>(i,j-1));
+                    negLU2 = abs(grayImage2.at<unsigned char>(i+1,j)-grayImage2.at<unsigned char>(i,j-1));
+                    negLU = alpha*negLU1 + (1-alpha)*negLU2;
                     g -> add_edge( i*cols + j, i*cols + j +1, negLU, posLU );
                 }
             }
@@ -140,34 +189,51 @@ int *FindSeam(Mat &grayImage)
             }
         }
     }
+    for(int k=0; k<rows; k++)
+    {
+        cout<< "Seam" << Seam[k] << endl;
+    }
     delete g;
     return Seam;
 }
-Mat ReduceVer(Mat GrayImage, Mat image)
+Mat ReduceVer(Mat &GrayImage1, Mat &GrayImage2, Mat image)
 {
-    int rows = GrayImage.rows;
+    int rows = GrayImage1.rows;
     int *Seam = new int[rows];
-    Seam = FindSeam(GrayImage);
+    Seam = FindSeam(GrayImage1, GrayImage2);
     Mat ReturnImage = RemoveSeam(image, Seam);
+    GrayImage1 = RemoveSeamGray(GrayImage1, Seam);
+    GrayImage2 = RemoveSeamGray(GrayImage2, Seam);
     return ReturnImage;
 }
-Mat ReduceHor(Mat GrayImage, Mat image)
+Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat image)
 {
-    int rows = GrayImage.rows;
+    int rows = GrayImage1.rows;
     int *Seam = new int[rows];
-    Seam = FindSeam(GrayImage);
+    Seam = FindSeam(GrayImage1.t(), GrayImage2.t());
+    /*for(int k=0; k<rows; k++)
+    {
+        cout<< "Seam Hor" << Seam[k] << endl;
+    }*/
+    cout << "New Seam" << endl;
     Mat ReturnImage = RemoveSeam(image, Seam);
+    Mat GrayImage1temp = RemoveSeamGray(GrayImage1.t(), Seam);
+    Mat GrayImage2temp = RemoveSeamGray(GrayImage2.t(), Seam);
+    GrayImage1 = GrayImage1temp.t();
+    GrayImage2 = GrayImage2temp.t();
     return ReturnImage.t();
 }
 Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
 {
-    Mat image = frame1;
-    Mat grayImage;// = (Mat_<int>(4, 4) << 4,5,200,200,4,5,200,200,4,5,5,198,4,5,5,5);
-    cvtColor(image,grayImage, CV_RGB2GRAY);
+    //Mat image = frame1;
+    Mat grayImage1, grayImage2;// = (Mat_<int>(4, 4) << 4,5,200,200,4,5,200,200,4,5,5,198,4,5,5,5);
+    cvtColor(frame1,grayImage1, CV_RGB2GRAY);
+    cvtColor(frame2,grayImage2, CV_RGB2GRAY);
     int minDim = 0, diffHorVer = 0;
-    Mat ReducedGrayImage, ReducedImage;
-    grayImage.copyTo(ReducedGrayImage);
-    image.copyTo(ReducedImage);
+    Mat ReducedGrayImage1, ReducedGrayImage2, ReducedImage;
+    grayImage1.copyTo(ReducedGrayImage1);
+    grayImage2.copyTo(ReducedGrayImage2);
+    frame1.copyTo(ReducedImage);
 
     if(hor > ver)
     {
@@ -184,10 +250,10 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     // the two
     for(int i = 0; i < minDim; ++i)
     {
-        ReducedImage = ReduceVer(ReducedGrayImage, ReducedImage);
-        cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
-        ReducedImage = ReduceHor(ReducedGrayImage.t(), ReducedImage.t());
-        cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+        ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2, ReducedImage);
+        //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+        ReducedImage = ReduceHor(ReducedGrayImage1, ReducedGrayImage2, ReducedImage.t());
+        //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
     }
 
     // finish carving the larger dimension
@@ -195,16 +261,16 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     {
         for(int i = 0; i < diffHorVer; ++i)
         {
-            ReducedImage = ReduceHor(ReducedGrayImage.t(), ReducedImage.t());
-            cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+            ReducedImage = ReduceHor(ReducedGrayImage1,ReducedGrayImage2, ReducedImage.t());
+            //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
         }
     }
     else
     {
         for(int i = 0; i < diffHorVer; ++i)
         {
-            ReducedImage = ReduceVer(ReducedGrayImage, ReducedImage);
-            cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
+            ReducedImage = ReduceVer(ReducedGrayImage1, ReducedGrayImage2, ReducedImage);
+            //cvtColor(ReducedImage, ReducedGrayImage, CV_RGB2GRAY);
         }
     }
     return ReducedImage;
