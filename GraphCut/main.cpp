@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include <string>
+#include <cstring>
 #include <opencv/cv.h>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -116,8 +117,8 @@ int *FindSeam(Mat &grayImage)
 
     int flow = g -> maxflow();
 
-    cout << "Flow = %d\n" << flow << endl;
-    cout<< "Minimum cut:\n"<<endl;
+    //cout << "Flow = %d\n" << flow << endl;
+    //cout<< "Minimum cut:\n"<<endl;
     /*for(int i=0;i<16; i++)
      {
      if (g->what_segment(i) == GraphType::SOURCE)
@@ -210,14 +211,52 @@ Mat ReduceFrame(Mat frame1, Mat frame2, int ver, int hor)
     return ReducedImage;
 }
 
-int main()
+void printUsage()
+{
+    cout << "Usage: GraphCut -f <filename> -v <vertical cuts> -h <horizontal cuts>" << endl;
+}
+
+int main(int argc, char* argv[])
 {
     VideoCapture cap;
     VideoWriter output;
-    cap.open("88_7_orig.mov");
+    string inFile = "earth_4_orig.mov";
     Mat frame1, frame2, NewFrame;
     int ver = 2;
     int hor = 2;
+    int frameCount = 1;
+
+    if(argc > 1)
+    {
+        for(int i = 1; i < argc; ++i)
+        {
+            if(strcmp(argv[i], "-f") == 0)
+            {
+                inFile = string(argv[++i]);
+            }
+            else if(strcmp(argv[i], "-v") == 0)
+            {
+                ver = atoi(argv[++i]);
+            }
+            else if(strcmp(argv[i], "-h") == 0)
+            {
+                hor = atoi(argv[++i]);
+            }
+            else
+            {
+                cout << "Invalid argument " << argv[i] << endl;
+                printUsage();
+            }
+        }
+    }
+    else
+    {
+        printUsage();
+        return -1;
+    }
+
+    cap.open(inFile);
+    int maxFrame = cap.get(CV_CAP_PROP_FRAME_COUNT);
 
     if(!cap.isOpened())
     {
@@ -226,14 +265,17 @@ int main()
     }
     int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     Size S = Size((int)cap.get(CV_CAP_PROP_FRAME_WIDTH) -ver , (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT)-hor);
-    char key = 0;
+    //char key = 0;
     int first = 1;
     int last = 0;
     NewFrame = Mat::zeros(S, CV_32F);
-    output.open("result.mov", ex, cap.get(CV_CAP_PROP_FPS), S, true);
+    string::size_type pAt = inFile.find_last_of('.');   // Find extension point
+    const string outFile = inFile.substr(0, pAt) + "-basic.mov";
+    output.open(outFile, ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
+    cout << "Processing " << maxFrame << " frames..." << endl;
     //int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
-    while (key != 'q' && !last)
+    while (/*key != 'q' && */ !last)
     {
         if(first ==1 )
         {
@@ -252,17 +294,18 @@ int main()
             if(frame2.empty())
             {
                 /* Graph cut on frame 1 */
-                cout<< "Last frame" << endl;
+                //cout<< "Last frame" << endl;
                 frame2 = frame1;
                 last = 1;
             }
             NewFrame = ReduceFrame(frame1, frame2, ver, hor);
             frame1 = frame2;
         }
+        cout << "Frame " << frameCount++ << "/" << maxFrame << endl;
         imshow("Frames", NewFrame);
         // quit when user press 'q'
         output<<NewFrame;
-        key = cvWaitKey(1000 / 25);
+        //key = cvWaitKey(1000 / 25);
     }
     return 0;
 }
