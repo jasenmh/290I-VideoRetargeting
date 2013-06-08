@@ -8,7 +8,7 @@ Course website: http://www.cs.ucsb.edu/~mturk/imaging/
 
 - [X] Decide on implementation language: Matlab (+OpenCV possible)
 - [X] Decide on specific algorithm: Seam carving using gradient mapping
-- [ ] Implement on 2D images
-- [ ] Implement on video
+- [X] Implement on 2D images
+- [X] Implement on video
 - [ ] Test
 - [ ] Present results
