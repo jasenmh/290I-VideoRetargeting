@@ -214,10 +214,12 @@ int main()
 {
     VideoCapture cap;
     VideoWriter output;
-    cap.open("88_7_orig.mov");
+    //cap.open("88_7_orig.mov");
+    String inFile = "earth_4_orig.mov";
+    cap.open(inFile);
     Mat frame1, frame2, NewFrame;
-    int ver = 2;
-    int hor = 2;
+    int ver = 40;
+    int hor = 10;
 
     if(!cap.isOpened())
     {
@@ -229,6 +231,8 @@ int main()
     char key = 0;
     int first = 1;
     int last = 0;
+    string::size_type pAt = inFile.find_last_of('.');   // Find extension point
+    const string NAME = inFile.substr(0, pAt) + "-basic.mov";
     NewFrame = Mat::zeros(S, CV_32F);
     output.open("result.mov", ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
