@@ -282,8 +282,8 @@ int main()
     VideoWriter output;
     cap.open("88_7_orig.mov");
     Mat frame1, frame2, NewFrame;
-    int ver = 2;
-    int hor = 2;
+    int ver = 10;
+    int hor = 10;
 
     if(!cap.isOpened())
     {

@@ -12,24 +12,25 @@ HEADERS += \
     graph.h \
     block.h
 
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/release/ -lopencv_core
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/debug/ -lopencv_core
+else:symbian: LIBS += -lopencv_core
+else:unix: LIBS += -L$$PWD/../../../../../../../usr/local/lib/ -lopencv_core
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/release/ -lopencv_core
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/debug/ -lopencv_core
-else:unix: LIBS += -L$$PWD/../../../usr/local/lib/ -lopencv_core
+INCLUDEPATH += $$PWD/../../../../../../../usr/local/include
+DEPENDPATH += $$PWD/../../../../../../../usr/local/include
 
-INCLUDEPATH += $$PWD/../../../usr/local/include
-DEPENDPATH += $$PWD/../../../usr/local/include
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/release/ -lopencv_highgui
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/debug/ -lopencv_highgui
+else:symbian: LIBS += -lopencv_highgui
+else:unix: LIBS += -L$$PWD/../../../../../../../usr/local/lib/ -lopencv_highgui
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/release/ -lopencv_highgui
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/debug/ -lopencv_highgui
-else:unix: LIBS += -L$$PWD/../../../usr/local/lib/ -lopencv_highgui
+INCLUDEPATH += $$PWD/../../../../../../../usr/local/include
+DEPENDPATH += $$PWD/../../../../../../../usr/local/include
 
-INCLUDEPATH += $$PWD/../../../usr/local/include
-DEPENDPATH += $$PWD/../../../usr/local/include
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/release/ -lopencv_imgproc
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../../../../usr/local/lib/debug/ -lopencv_imgproc
+else:unix: LIBS += -L$$PWD/../../../../../../../usr/local/lib/ -lopencv_imgproc
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/release/ -lopencv_imgproc
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../usr/local/lib/debug/ -lopencv_imgproc
-else:unix: LIBS += -L$$PWD/../../../usr/local/lib/ -lopencv_imgproc
-
-INCLUDEPATH += $$PWD/../../../usr/local/include
-DEPENDPATH += $$PWD/../../../usr/local/include
+INCLUDEPATH += $$PWD/../../../../../../../usr/local/include
+DEPENDPATH += $$PWD/../../../../../../../usr/local/include
