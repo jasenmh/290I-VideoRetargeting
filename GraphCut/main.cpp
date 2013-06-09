@@ -177,8 +177,8 @@ int *FindSeam(Mat grayImage1, Mat grayImage2, Mat grayImage3, Mat grayImage4)
 
     int flow = g -> maxflow();
 
-    cout << "Flow = %d\n" << flow << endl;
-    cout<< "Minimum cut:\n"<<endl;
+    //cout << "Flow = %d\n" << flow << endl;
+    //cout<< "Minimum cut:\n"<<endl;
     for(int i=0; i<rows; i++)
     {
         for(int j=0;j<cols; j++)
@@ -218,7 +218,7 @@ Mat ReduceHor(Mat &GrayImage1, Mat &GrayImage2, Mat &GrayImage3, Mat &GrayImage4
     {
         cout<< "Seam Hor" << Seam[k] << endl;
     }*/
-    cout << "New Seam" << endl;
+    //cout << "New Seam" << endl;
     Mat ReturnImage = RemoveSeam(image, Seam);
     Mat GrayImage1temp = RemoveSeamGray(GrayImage1.t(), Seam);
     Mat GrayImage2temp = RemoveSeamGray(GrayImage2.t(), Seam);
@@ -287,30 +287,71 @@ Mat ReduceFrame(Mat frame1, Mat frame2, Mat frame3, Mat frame4,int ver, int hor)
     return ReducedImage;
 }
 
-int main()
+void printUsage()
+{
+    cout << "Usage: GraphCut -f <filename> -v <vertical cuts> -h <horizontal cuts>" << endl;
+}
+
+int main(int argc, char* argv[])
 {
     VideoCapture cap;
     VideoWriter output;
-    cap.open("88_7_orig.mov");
+    string inFile = "88_7_orig.mov";
     Mat frame1, frame2, frame3, frame4, NewFrame;
     int ver = 2;
     int hor = 2;
+    int frameCount = 1;
+    int maxFrames;
 
-    if(!cap.isOpened())
+    if(argc > 1)
     {
-        printf("!!! cvCaptureFromAVI failed (file not found?)\n");
+        for(int i = 1; i < argc; ++i)
+        {
+            if(strcmp(argv[i], "-f") == 0)
+            {
+                inFile = argv[++i];
+            }
+            else if(strcmp(argv[i], "-h") == 0)
+            {
+                hor = atoi(argv[++i]);
+            }
+            else if(strcmp(argv[i], "-v") == 0)
+            {
+                ver = atoi(argv[++i]);
+            }
+            else
+            {
+                cerr << "Unknown flag: " << argv[i] << endl;
+                printUsage();
+            }
+        }
+    }
+    else
+    {
+        printUsage();
         return -1;
     }
+
+    cap.open(inFile);
+    if(!cap.isOpened())
+    {
+        cerr << "Unable to open input file." << endl;
+        return -1;
+    }
+    maxFrames = cap.get(CV_CAP_PROP_FRAME_COUNT);
+
     int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     Size S = Size((int)cap.get(CV_CAP_PROP_FRAME_WIDTH) -ver , (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT)-hor);
-    char key = 0;
+    //char key = 0;
     int first = 1, second = 1, third = 1;
     int last = 0;
     NewFrame = Mat::zeros(S, CV_32F);
-    output.open("result.mov", ex, cap.get(CV_CAP_PROP_FPS), S, true);
+    string::size_type pAt = inFile.find_last_of('.');   // Find extension point
+    const string outFile = inFile.substr(0, pAt) + "-temp4.mov";
+    output.open(outFile, ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
     //int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
-    while (key != 'q' && last<3 )
+    while (/*key != 'q' &&*/ last<3 )
     {
         if(first ==1 )
         {
@@ -351,7 +392,7 @@ int main()
             if(frame4.empty())
             {
                 /* Graph cut on frame 1 */
-                cout<< "Last frame" << endl;
+                //cout<< "Last frame" << endl;
                 if(last ==0)
                 {
                     frame4 = frame1;
@@ -374,10 +415,11 @@ int main()
             frame2 = frame3;
             frame3 = frame4;
         }
-        imshow("Frames", NewFrame);
+        //imshow("Frames", NewFrame);
         // quit when user press 'q'
         output<<NewFrame;
-        key = cvWaitKey(1000 / 25);
+        //key = cvWaitKey(1000 / 25);
+        cout << "Frame " << frameCount++ << "/" << maxFrames << endl;
     }
     return 0;
 }
