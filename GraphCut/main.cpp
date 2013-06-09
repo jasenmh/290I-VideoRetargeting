@@ -268,6 +268,8 @@ int main(int argc, char* argv[])
     //char key = 0;
     int first = 1;
     int last = 0;
+    string::size_type pAt = inFile.find_last_of('.');   // Find extension point
+    const string NAME = inFile.substr(0, pAt) + "-basic.mov";
     NewFrame = Mat::zeros(S, CV_32F);
     string::size_type pAt = inFile.find_last_of('.');   // Find extension point
     const string outFile = inFile.substr(0, pAt) + "-basic.mov";
