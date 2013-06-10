@@ -290,6 +290,9 @@ Mat ReduceFrame(Mat frame1, Mat frame2, Mat frame3, Mat frame4,int ver, int hor)
 void printUsage()
 {
     cout << "Usage: GraphCut -f <filename> -v <vertical cuts> -h <horizontal cuts>" << endl;
+    cout << "\t-q: quiet mode, supresses progress notifications" << endl;
+    cout << "\t-r: display report after processing is complete" << endl;
+    cout << "\t-d: enable display of current frame during processing" << endl;
 }
 
 int main(int argc, char* argv[])
@@ -302,6 +305,9 @@ int main(int argc, char* argv[])
     int hor = 2;
     int frameCount = 1;
     int maxFrames;
+    bool quietMode = false;
+    bool reportMode = false;
+    bool displayMode = false;
 
     if(argc > 1)
     {
@@ -318,6 +324,18 @@ int main(int argc, char* argv[])
             else if(strcmp(argv[i], "-v") == 0)
             {
                 ver = atoi(argv[++i]);
+            }
+            else if(strcmp(argv[i], "-q") == 0)
+            {
+                quietMode = true;
+            }
+            else if(strcmp(argv[i], "-r") == 0)
+            {
+                reportMode = true;
+            }
+            else if(strcmp(argv[i], "-d") == 0)
+            {
+                displayMode = true;
             }
             else
             {
@@ -339,6 +357,8 @@ int main(int argc, char* argv[])
         return -1;
     }
     maxFrames = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    int origWid = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    int origHei = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 
     int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
     Size S = Size((int)cap.get(CV_CAP_PROP_FRAME_WIDTH) -ver , (int)cap.get(CV_CAP_PROP_FRAME_HEIGHT)-hor);
@@ -349,6 +369,9 @@ int main(int argc, char* argv[])
     string::size_type pAt = inFile.find_last_of('.');   // Find extension point
     const string outFile = inFile.substr(0, pAt) + "-temp4.mov";
     output.open(outFile, ex, cap.get(CV_CAP_PROP_FPS), S, true);
+
+    if(quietMode == false)
+        cout << "Processing " << maxFrames << " frames..." << endl;
 
     //int fps = (int) cvGetCaptureProperty(capture, CV_CAP_PROP_FPS);
     while (/*key != 'q' &&*/ last<3 )
@@ -415,12 +438,23 @@ int main(int argc, char* argv[])
             frame2 = frame3;
             frame3 = frame4;
         }
-        //imshow("Frames", NewFrame);
+
+        if(displayMode == true)
+            imshow("Frames", NewFrame);
         // quit when user press 'q'
         output<<NewFrame;
         //key = cvWaitKey(1000 / 25);
-        cout << "Frame " << frameCount++ << "/" << maxFrames << endl;
+        if(quietMode == false)
+            cout << "Frame " << frameCount++ << "/" << maxFrames << endl;
     }
+
+    if(reportMode == true)
+    {
+        cout << "Input file: " << inFile << "\tOutput file: " << outFile << endl;
+        cout << "Dimension: " << origWid << "x" << origHei << "\tFrames: " << maxFrames << endl;
+        cout << "Seams carved: " << ver << "x" << hor << endl;
+    }
+
     return 0;
 }
 
