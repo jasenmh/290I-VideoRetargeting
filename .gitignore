@@ -3,5 +3,13 @@
 *.fig
 *.swp
 .~lock*
+*.config
+*.creator
+*.user
+*.includes
+*.files
+*.pro
+*.o
+*.mov
 SeamCarving
 opencv/save/

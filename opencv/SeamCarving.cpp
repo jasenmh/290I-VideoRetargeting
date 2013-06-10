@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <string>
-#include <cv.h>
-#include <highgui.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 
 //include "SeamCarving.h"
 
@@ -36,7 +36,7 @@ int costLeft(int i, int j, Mat rGrayImg)
 
 int costRight(int i, int j, Mat rGrayImg)
 {
-  int cols = rGrayImg.rows;
+  //int cols = rGrayImg.rows;
   int value;
 
   if(j == 1)
@@ -68,11 +68,12 @@ int costVertical(int i, int j, Mat rGrayImg)
 void calcEnergyMapForward(Mat &rGrad, Mat &rGrayImg,
   Mat &eMapVer)
 {
-  int channels = rGrad.channels();
+  //int channels = rGrad.channels();
   int nRows = rGrad.rows;
-  int nCols = rGrad.cols * channels;
+  int nCols = rGrad.cols; // removed: "* channels;", do we need this for 3 color channels?
   int cval1, cval2, cval3;
 
+  // this probably isn't necessary since we are creating this mat as multidim
   if(rGrad.isContinuous())
   {
     nCols += nRows;
@@ -131,37 +132,39 @@ void calcEnergyMapForward(Mat &rGrad, Mat &rGrayImg,
 
 }
 
-void findSeam(Mat &energyMap, Mat &seam)
+void findSeam(Mat energyMap, int seam[])
 {
     int rows = energyMap.rows;
     int cols = energyMap.cols;
-    Mat newSeam = Mat.zeros(rows, 1, CV_32S);
-    for(k = 0; k < rows; ++k)
+    int *newSeam;
+    int minIdx;
+
+    newSeam = new int[rows];
+
+    for(int k = 0; k < rows; ++k)
     {
-        double minVal;
-        int minIdx;
 
         if(k == 1)
         {
-            minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
-            newSeam.at(rows-1) = *minIdx;
+            minMaxIdx(energyMap.col(rows-1), /*&minVal*/ NULL, NULL, &minIdx, NULL);
+            newSeam[rows-1] = minIdx;
         }
         else
         {
-            if(newSeam.at(rows-k+2) == 1)
+            if(newSeam[rows-k+2] == 1)
             {
-                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
-                newSeam.at(rows-1) = *minIdx;
+                minMaxIdx(energyMap.col(rows-k+1).rowRange(Range(0, 1)), NULL, NULL, &minIdx, NULL);
+                newSeam[rows-1] = minIdx;
             }
-            else if(newSeam.at(rows-k+2) == cols)
+            else if(newSeam[rows-k+2] == cols)
             {
-                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
-                newSeam.at(rows-1) = *minIdx;
+                minMaxIdx(energyMap.col(rows-k+1).rowRange(Range(cols-2, cols-1)), NULL, NULL, &minIdx, NULL);
+                newSeam[rows-k+1] = seam[rows-k+2] - 2 + minIdx;
             }
             else
             {
-                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
-                newSeam.at(rows-1) = *minIdx;
+                minMaxIdx(energyMap.col(rows-k+1).rowRange(Range(seam[rows-k+2]-1, seam[rows-k+2])), NULL, NULL, &minIdx, NULL);
+                newSeam[rows-k+1] = seam[rows-k+2] -2 + minIdx;
             }
         }
     }
@@ -169,59 +172,43 @@ void findSeam(Mat &energyMap, Mat &seam)
     seam = newSeam;
 }
 
-Mat* removeSeam(Mat inputImage, Mat seam)
+Mat* removeSeam(Mat inputImage, int seam[])
 {
     int rows = inputImage.rows;
     int cols = inputImage.cols;
-    Mat reducedImage(cols-1, rows, CV_32S);
+    //Mat reducedImage(rows, cols-1, CV_8UC3);
+    Mat *reducedImage = new Mat(Mat::zeros(rows, cols-1, CV_8UC3));
 
-    for(i = 0; i < rows; ++i)
+    for(int i = 0; i < rows; ++i)
     {
-        for(j = 0; j < cols-1; ++j)
-        {
-            if(j < seam.at(i))
-            {
-                reducedImage.at(i, j) = inputImage.at(i, j);
-            }
-            else if(j >= seam.at(i))
-            {
-                reducedImage.at(i, j) = inputImage.at(i, j+1);
-            }
-        }
+        inputImage.row(i).colRange(Range(0, seam[i])).copyTo(reducedImage->row(i).colRange(Range(0, seam[i])));
+        inputImage.row(i).colRange(Range(seam[i]+1, cols)).copyTo(reducedImage->row(i).colRange(Range(seam[i], cols-1)));
     }
 
     return reducedImage;
 }
 
-Mat* removeSeamGradient(gradMean, seam)
+Mat* removeSeamGradient(Mat gradMean, int seam[])
 {
-    int rows = inputImage.rows;
-    int cols = inputImage.cols;
-    Mat reducedGradMean(cols-1, rows, CV_32S);
+    int rows = gradMean.rows;
+    int cols = gradMean.cols;
+    //Mat reducedGradMean(cols-1, rows, CV_8UC3);
+    Mat *reducedGradMean = new Mat(Mat::zeros(rows, cols-1, CV_8UC3));
 
-    for(i = 0; i < rows; ++i)
+    for(int i = 0; i < rows; ++i)
     {
-        for(j = 0; j < cols-1; ++j)
-        {
-            if(j < seam.at(i))
-            {
-                reducedGradMean.at(i, j) = gradMean.at(i, j);
-            }
-            else if(j >= seam.at(i))
-            {
-                reducedGradMean.at(i, j) = gradMean.at(i, j+1);
-            }
-        }
+        gradMean.row(i).colRange(Range(0, seam[i])).copyTo(reducedGradMean->row(i).colRange(Range(0, seam[i])));
+        gradMean.row(i).colRange(Range(seam[i]+1, cols)).copyTo(reducedGradMean->row(i).colRange(Range(seam[i], cols-1)));
     }
 
     return reducedGradMean;
-
 }
 
 void removeVer(Mat &reducedInputImage, Mat &reducedGrayImage,
   Mat &reducedGradMean)
 {
-  Mat energyMapVer, seamVer;
+  Mat energyMapVer;
+  int *seamVer;
 
   calcEnergyMapForward(reducedGradMean, reducedGrayImage, energyMapVer);
   findSeam(energyMapVer, seamVer);
@@ -233,13 +220,18 @@ void removeVer(Mat &reducedInputImage, Mat &reducedGrayImage,
 void removeHor(Mat &reducedInputImage, Mat &reducedGrayImage,
   Mat &reducedGradMean)
 {
-  Mat energyMapHor, seamHor;
+  Mat energyMapHor;
+  int *seamHor;
 
-  calcEnergyMapForward(reducedGradMean.t(), reducedGrayImage.t(),
+  reducedGradMean.t();
+  reducedGrayImage.t();
+  calcEnergyMapForward(reducedGradMean, reducedGrayImage,
     energyMapHor);
   findSeam(energyMapHor, seamHor);
-  removeSeam(reducedInputImage.t(), seamHor);
-  removeSeam(reducedGrayImage.t(), seamHor);
+  reducedInputImage.t();
+  reducedGrayImage.t();
+  removeSeam(reducedInputImage, seamHor);
+  removeSeam(reducedGrayImage, seamHor);
   removeSeamGradient(reducedGradMean, seamHor);
 }
 
