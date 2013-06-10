@@ -133,16 +133,88 @@ void calcEnergyMapForward(Mat &rGrad, Mat &rGrayImg,
 
 void findSeam(Mat &energyMap, Mat &seam)
 {
+    int rows = energyMap.rows;
+    int cols = energyMap.cols;
+    Mat newSeam = Mat.zeros(rows, 1, CV_32S);
+    for(k = 0; k < rows; ++k)
+    {
+        double minVal;
+        int minIdx;
 
+        if(k == 1)
+        {
+            minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
+            newSeam.at(rows-1) = *minIdx;
+        }
+        else
+        {
+            if(newSeam.at(rows-k+2) == 1)
+            {
+                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
+                newSeam.at(rows-1) = *minIdx;
+            }
+            else if(newSeam.at(rows-k+2) == cols)
+            {
+                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
+                newSeam.at(rows-1) = *minIdx;
+            }
+            else
+            {
+                //minMaxIdx(energyMap.col(rows-1), &minVal, NULL, &minIdx, NULL);
+                newSeam.at(rows-1) = *minIdx;
+            }
+        }
+    }
+
+    seam = newSeam;
 }
 
-void removeSeam()
+Mat* removeSeam(Mat inputImage, Mat seam)
 {
+    int rows = inputImage.rows;
+    int cols = inputImage.cols;
+    Mat reducedImage(cols-1, rows, CV_32S);
 
+    for(i = 0; i < rows; ++i)
+    {
+        for(j = 0; j < cols-1; ++j)
+        {
+            if(j < seam.at(i))
+            {
+                reducedImage.at(i, j) = inputImage.at(i, j);
+            }
+            else if(j >= seam.at(i))
+            {
+                reducedImage.at(i, j) = inputImage.at(i, j+1);
+            }
+        }
+    }
+
+    return reducedImage;
 }
 
-void removeSeamGradient()
+Mat* removeSeamGradient(gradMean, seam)
 {
+    int rows = inputImage.rows;
+    int cols = inputImage.cols;
+    Mat reducedGradMean(cols-1, rows, CV_32S);
+
+    for(i = 0; i < rows; ++i)
+    {
+        for(j = 0; j < cols-1; ++j)
+        {
+            if(j < seam.at(i))
+            {
+                reducedGradMean.at(i, j) = gradMean.at(i, j);
+            }
+            else if(j >= seam.at(i))
+            {
+                reducedGradMean.at(i, j) = gradMean.at(i, j+1);
+            }
+        }
+    }
+
+    return reducedGradMean;
 
 }
 
