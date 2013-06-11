@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <time.h>
 #include <stdio.h>
 #include "graph.h"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -370,6 +370,8 @@ int main(int argc, char* argv[])
     const string outFile = inFile.substr(0, pAt) + "-temp4.mov";
     output.open(outFile, ex, cap.get(CV_CAP_PROP_FPS), S, true);
 
+    clock_t startTime = clock();
+
     if(quietMode == false)
         cout << "Processing " << maxFrames << " frames..." << endl;
 
@@ -453,6 +455,7 @@ int main(int argc, char* argv[])
         cout << "Input file: " << inFile << "\tOutput file: " << outFile << endl;
         cout << "Dimension: " << origWid << "x" << origHei << "\tFrames: " << maxFrames << endl;
         cout << "Seams carved: " << ver << "x" << hor << endl;
+        cout << "Elapsed time: " << (clock() - startTime)/CLOCKS_PER_SEC << endl;
     }
 
     return 0;
