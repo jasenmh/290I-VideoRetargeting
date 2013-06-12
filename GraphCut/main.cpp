@@ -35,8 +35,10 @@ Mat RemoveSeam(Mat image, int Seam[])
     }*/
     for(int i=0; i<nrows; i++)
     {
-        image.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
-        image.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
+        if(Seam[i] != 0)
+            image.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
+        if(Seam[i] != cols-1)
+            image.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
         /*for(int j=0; j<ncols-1; j++)
         {
             if(j<Seam[i])
@@ -61,8 +63,10 @@ Mat RemoveSeamGray(Mat GrayImage, int Seam[])
     //vector<Mat> channels = cv::split()
     for(int i=0; i<nrows; i++)
     {
-        GrayImage.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
-        GrayImage.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
+        if(Seam[i] != 0)
+            GrayImage.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
+        if(Seam[i] != cols-1)
+            GrayImage.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
         /*for(int j=0; j<ncols-1; j++)
         {
             if(j<Seam[i])
