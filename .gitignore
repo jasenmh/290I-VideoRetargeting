@@ -1,7 +1,16 @@
 *.jpg
 *.bmp
+*.png
 *.fig
 *.swp
 .~lock*
+*.pro
+*.user
+*.mov
+*.o
+*.files
+*.includes
+*.creator
+*.config
 SeamCarving
 opencv/save/
