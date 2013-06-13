@@ -37,7 +37,7 @@ Mat RemoveSeam(Mat image, int Seam[])
     {
         if(Seam[i] != 0)
             image.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
-        if(Seam[i] != cols-1)
+        if(Seam[i] != ncols-1)
             image.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
         /*for(int j=0; j<ncols-1; j++)
         {
@@ -65,7 +65,7 @@ Mat RemoveSeamGray(Mat GrayImage, int Seam[])
     {
         if(Seam[i] != 0)
             GrayImage.row(i).colRange(Range(0,Seam[i])).copyTo(ReducedImage.row(i).colRange(Range(0,Seam[i])));
-        if(Seam[i] != cols-1)
+        if(Seam[i] != ncols-1)
             GrayImage.row(i).colRange(Range(Seam[i]+1, ncols)).copyTo(ReducedImage.row(i).colRange(Range(Seam[i],ncols-1)));
         /*for(int j=0; j<ncols-1; j++)
         {
